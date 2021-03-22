@@ -249,11 +249,11 @@ def make_data(system_type):
         }
     )
     if dd5e_on:
-        bpr_ratio_df["D&D 5e"] = (np.hstack([np.nan, bpr(dd5e_levels_norm), np.nan]),)
+        bpr_ratio_df["D&D 5e"] = np.hstack([np.nan, bpr(dd5e_levels_norm), np.nan])
     if dd3e_on:
-        bpr_ratio_df["D&D 3e"] = (np.hstack([np.nan, bpr(dd3e), np.nan]),)
+        bpr_ratio_df["D&D 3e"] = np.hstack([np.nan, bpr(dd3e), np.nan])
     if pokemon_on:
-        bpr_ratio_df["Pokemon"] = (np.hstack([np.nan, bpr(pokemon), np.nan]),)
+        bpr_ratio_df["Pokemon"] = np.hstack([np.nan, bpr(pokemon), np.nan])
 
     bpr_ratio_df = bpr_ratio_df.melt(
         id_vars=["Level"], value_name="Value", var_name="Stat"
@@ -267,11 +267,11 @@ def make_data(system_type):
         }
     )
     if dd5e_on:
-        tpr_ratio_df["D&D 5e"] = (np.hstack([np.nan, tpr(dd5e_levels_norm), np.nan]),)
+        tpr_ratio_df["D&D 5e"] = np.hstack([np.nan, tpr(dd5e_levels_norm), np.nan])
     if dd3e_on:
-        tpr_ratio_df["D&D 3e"] = (np.hstack([np.nan, tpr(dd3e), np.nan]),)
+        tpr_ratio_df["D&D 3e"] = np.hstack([np.nan, tpr(dd3e), np.nan])
     if pokemon_on:
-        tpr_ratio_df["Pokemon"] = (np.hstack([np.nan, tpr(pokemon), np.nan]),)
+        tpr_ratio_df["Pokemon"] = np.hstack([np.nan, tpr(pokemon), np.nan])
 
     tpr_ratio_df = tpr_ratio_df.melt(
         id_vars=["Level"], value_name="Value", var_name="Stat"
