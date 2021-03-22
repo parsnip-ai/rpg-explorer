@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import base64
 
 title = "Leveling System Explorer"
 st.set_page_config(page_title=title, initial_sidebar_state="collapsed")
@@ -13,13 +14,13 @@ st.markdown(
 
 # Usage
 
-Each plot below visualizes our current XP system in *blue* and a simulated system in *red*. Other colors are XP systems based on formulas from some games. For ease of comparison, each simulated system is scaled to a % of total earnable XP. 
+Each plot below visualizes our current XP system in *blue* and a simulated system in *red*. Other colors are XP systems based on formulas from some games. For ease of comparison, each simulated system is scaled to a % of total earnable XP.
 
 You can change the Progression Type below to generate a new description and simulation to get a feel for how progression changes.
 
-You can also manually edit our current XP system level values by opening up the sidebar using the arrow on the top-left of the page.
+You can also manually edit our current XP system level values by opening up the sidebar using the arrow on the top-left of the page. Changing these values will update all *blue* lines in each plot. You can also download this file as a csv to save changes you made.
 
-Plots are **interactive** so you can: 
+Plots are **interactive** so you can:
 - hover over each plot to look at the value at the level
 - click on any of labels in each plot legend to hide/show them
 - drag and zoom into areas of each plot.
@@ -92,47 +93,43 @@ dd5e_levels_norm = np.hstack(
 )
 user_levels_norm = user_levels / user_levels.max() * 100
 
+st.sidebar.subheader("Max XP")
+max_xp = st.sidebar.number_input(
+    "This scales all other XP in current system", value=user_levels.max()
+)
+download_button_elem = st.sidebar.empty()
+download_link_elem = st.sidebar.empty()
+st.sidebar.markdown("---")
 vals = []
 for i, elem in enumerate(user_levels):
     vals.append(st.sidebar.number_input(f"Level {i+1}", value=elem))
 vals = np.array(vals)
-vals_norm = (vals / vals.max()) * 100
+vals_norm = (vals / max_xp) * 100
 
-st.markdown("## Description")
+st.markdown("### Settings")
 system_type = st.selectbox("Progression Type", ["Linear", "Exponential", "Polynomial"])
 
-if system_type == "Exponential":
-    """
-    Several different games such as _Runescape_ use approximately exponential xp curves, but with low theta values (~1.1). Lower exponential values lead to _gentler progression curves_, with near constant progression ratios close to 1. This has the effect of being verying "inviting" to the player, as the next level is always "in sight." and the game doesn't "feel" much harder as the player progresses. Too low though and the game can feel very fast and too-easy.
+default_poly = 1.5
 
-    Higher exponential steepen the late-game leveling curve, and increase the progression ratios, making progress "feel" harder overall.
-    """
-elif system_type == "Polynomial":
+if system_type == "Polynomial":
+    theta = st.number_input(
+        "Adjust growth factor (theta)",
+        value=default_poly,
+        min_value=1.0,
+        max_value=100.0,
+    )
+    dd5e_on, dd3e_on, pokemon_on = (
+        st.checkbox("toggle D&D 5e", False),
+        st.checkbox("toggle D&D 3e", False),
+        st.checkbox("toggle Pokemon", False),
+    )
+    st.header(f"Progression Type: {system_type}")
+
     """
     Polynomial progression is a popular alternative to Exponential progression. While it can have similar overall progression and rate-of-change, progression ratios look much more different and gradually taper down to 1 in later levels. Depending on the theta value, this can make a player feel "accomplished" or "overpowered" as they reach higher levels as progression will feel faster.
 
     """
-elif system_type == "Linear":
-    """
-    Linear progression feels relatively constant throughout a game, but is also easily exploitable by a player.
 
-    This exploitablility can be seen in the _total progression ratio_ (bottom most plot) which tapers off as the player levels. This means a player can progress much faster later in the game, if they constantly try to "min-max" their xp gains (i.e. going to for the biggest xp rewards).
-
-    Theta doesn't affect the rate of progression in linear models; it just scales the values.
-
-    """
-
-
-default_poly = 1.5
-if system_type == "Polynomial":
-    theta = st.number_input(
-        "adjust theta", value=default_poly, min_value=1.0, max_value=100.0
-    )
-    pokemon_on, dd5e_on, dd3e_on = (
-        st.checkbox("pokemon", False),
-        st.checkbox("dd3e", False),
-        st.checkbox("dd5e", False),
-    )
     st.subheader("Formula")
     st.latex(
         r"""
@@ -143,11 +140,19 @@ elif system_type == "Exponential":
     theta = st.number_input(
         "Adjust growth factor (theta)", value=1.1, min_value=1.0, max_value=5.0
     )
-    pokemon_on, dd5e_on, dd3e_on = (
+    dd5e_on, dd3e_on, pokemon_on = (
         st.checkbox("toggle D&D 5e", False),
         st.checkbox("toggle D&D 3e", False),
         st.checkbox("toggle Pokemon", False),
     )
+    st.header(f"Progression Type: {system_type}")
+
+    """
+    Several different games such as _Runescape_ use approximately exponential xp curves, but with low theta values (~1.1). Lower exponential values lead to _gentler progression curves_, with near constant progression ratios close to 1. This has the effect of being verying "inviting" to the player, as the next level is always "in sight." and the game doesn't "feel" much harder as the player progresses. Too low though and the game can feel very fast and too-easy.
+
+    Higher exponential steepen the late-game leveling curve, and increase the progression ratios, making progress "feel" harder overall.
+    """
+
     st.subheader("Formula")
     st.latex(
         r"""
@@ -156,18 +161,50 @@ elif system_type == "Exponential":
     )
 
 elif system_type == "Linear":
-    theta = st.number_input("adjust theta", value=default_poly)
+    theta = st.number_input("Adjust growth factor (theta)", value=default_poly)
     pokemon_on, dd5e_on, dd3e_on = (
         st.checkbox("toggle D&D 5e", False),
         st.checkbox("toggle D&D 3e", False),
         st.checkbox("toggle Pokemon", False),
     )
+    st.header(f"Progression Type: {system_type}")
+
+    """
+    Linear progression feels relatively constant throughout a game, but is also easily exploitable by a player.
+
+    This exploitablility can be seen in the _total progression ratio_ (bottom most plot) which tapers off as the player levels. This means a player can progress much faster later in the game, if they constantly try to "min-max" their xp gains (i.e. going to for the biggest xp rewards).
+
+    Theta doesn't affect the rate of progression in linear models; it just scales the values.
+    """
+
     st.subheader("Formula")
     st.latex(
         r"""
             xp = \theta * level
             """
     )
+
+
+def download_link(object_to_download, download_filename, download_link_text):
+    """
+    Generates a link to download the given object_to_download.
+
+    object_to_download (str, pd.DataFrame):  The object to be downloaded.
+    download_filename (str): filename and extension of file. e.g. mydata.csv, some_txt_output.txt
+    download_link_text (str): Text to display for download link.
+
+    Examples:
+    download_link(YOUR_DF, 'YOUR_DF.csv', 'Click here to download data!')
+    download_link(YOUR_STRING, 'YOUR_STRING.txt', 'Click here to download your text!')
+
+    """
+    if isinstance(object_to_download, pd.DataFrame):
+        object_to_download = object_to_download.to_csv(index=False)
+
+    # some strings <-> bytes conversions necessary here
+    b64 = base64.b64encode(object_to_download.encode()).decode()
+
+    return f'<a href="data:file/txt;base64,{b64}" download="{download_filename}">{download_link_text}</a>'
 
 
 def bpr(arr):
@@ -282,6 +319,22 @@ def make_data(system_type):
 
 dfs = make_data(system_type)
 
+dl_df = (
+    dfs[0]
+    .query("Stat == 'Current System'")[["Level", "Value"]]
+    .assign(
+        Value=lambda df: df.Value.apply(
+            lambda x: int(np.round(x / 100 * user_levels.max()))
+        )
+    )
+)
+
+if download_button_elem.button("Make csv file for edited xp"):
+    tmp_download_link = download_link(
+        dl_df, "current_system_xp.csv", "Click here to download"
+    )
+    download_link_elem.markdown(tmp_download_link, unsafe_allow_html=True)
+
 labels = [
     "XP (% of max)",
     "XP Derivative (% change)",
@@ -329,3 +382,7 @@ with st.beta_expander("Resources", expanded=True):
         - [Difficulty Curves and Spikes](https://cheesewatergames.net/2016/07/31/experience-point-difficulty-curves-and-spikes/)
         """
     )
+
+st.markdown("---")
+with st.beta_expander("Preview Data Download", expanded=False):
+    dl_df
